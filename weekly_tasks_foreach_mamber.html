@@ -1,0 +1,790 @@
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: var(--color-background-tertiary);
+    --card-bg: var(--color-background-primary);
+    --surface: var(--color-background-secondary);
+    --border: var(--color-border-tertiary);
+    --border-md: var(--color-border-secondary);
+    --text: var(--color-text-primary);
+    --muted: var(--color-text-secondary);
+    --hint: var(--color-text-tertiary);
+    --radius: var(--border-radius-md);
+    --radius-lg: var(--border-radius-lg);
+  }
+
+  body { font-family: 'DM Sans', sans-serif; }
+
+  .root { padding: 1rem 0 2rem; }
+
+  .top-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 1.25rem; flex-wrap: wrap; gap: 8px;
+  }
+
+  .board-title {
+    font-size: 18px; font-weight: 600; color: var(--text);
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .board-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: #d4808a;
+  }
+
+  .controls {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+
+  .week-tabs {
+    display: flex; background: var(--surface);
+    border: 0.5px solid var(--border); border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .week-tab {
+    padding: 6px 14px; font-size: 13px; font-weight: 500;
+    color: var(--muted); background: transparent; border: none;
+    cursor: pointer; transition: all 0.15s; white-space: nowrap;
+  }
+
+  .week-tab.active {
+    background: var(--card-bg); color: var(--text);
+    box-shadow: inset 0 0 0 0.5px var(--border-md);
+  }
+
+  .week-tab:hover:not(.active) { color: var(--text); background: var(--card-bg); }
+
+  .filter-row {
+    display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; align-items: center;
+  }
+
+  .filter-label { font-size: 12px; color: var(--muted); font-weight: 500; }
+
+  .member-pill {
+    padding: 4px 10px; font-size: 12px; font-weight: 500;
+    border-radius: 99px; border: 0.5px solid var(--border);
+    cursor: pointer; transition: all 0.15s; background: transparent;
+    color: var(--muted);
+  }
+
+  .member-pill.active { color: var(--text); border-color: var(--border-md); background: var(--surface); }
+
+  .board {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px; align-items: start;
+  }
+
+  .column {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    border: 0.5px solid var(--border);
+    padding: 12px;
+    min-width: 0;
+  }
+
+  .col-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .col-title {
+    font-size: 12px; font-weight: 600; color: var(--text);
+    letter-spacing: 0.04em; text-transform: uppercase;
+  }
+
+  .col-count {
+    font-size: 11px; font-weight: 500;
+    background: var(--border); color: var(--muted);
+    padding: 2px 7px; border-radius: 99px;
+  }
+
+  .task-card {
+    background: var(--card-bg);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.1s;
+    position: relative;
+  }
+
+  .task-card:last-child { margin-bottom: 0; }
+  .task-card:hover { border-color: var(--border-md); transform: translateY(-1px); }
+
+  .task-card.done {
+    opacity: 0.65;
+  }
+
+  .task-card.done .task-title {
+    text-decoration: line-through;
+    color: var(--muted);
+  }
+
+  .task-top {
+    display: flex; align-items: flex-start;
+    justify-content: space-between; gap: 6px; margin-bottom: 6px;
+  }
+
+  .task-title {
+    font-size: 13px; font-weight: 500; color: var(--text);
+    line-height: 1.4; flex: 1;
+  }
+
+  .check-btn {
+    width: 18px; height: 18px; border-radius: 4px;
+    border: 1.5px solid var(--border-md);
+    background: transparent; cursor: pointer;
+    flex-shrink: 0; margin-top: 1px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+
+  .check-btn.checked {
+    background: #4a8c6a; border-color: #4a8c6a;
+  }
+
+  .check-btn.checked::after {
+    content: ''; display: block;
+    width: 5px; height: 8px;
+    border: 2px solid #fff;
+    border-top: none; border-left: none;
+    transform: rotate(45deg) translateY(-1px);
+  }
+
+  .task-meta {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  }
+
+  .tag {
+    font-size: 11px; font-weight: 500;
+    padding: 2px 7px; border-radius: 99px;
+  }
+
+  .tag-api    { background: #e0edfb; color: #185fa5; }
+  .tag-db     { background: #eaf3de; color: #3b6d11; }
+  .tag-fe     { background: #fbeaf0; color: #993556; }
+  .tag-auth   { background: #f0ecfe; color: #534ab7; }
+  .tag-test   { background: #faeeda; color: #854f0b; }
+  .tag-deploy { background: #faece7; color: #993c1d; }
+  .tag-email  { background: #e1f5ee; color: #0f6e56; }
+
+  .member-badge {
+    font-size: 10px; font-weight: 600;
+    width: 20px; height: 20px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; text-transform: uppercase;
+  }
+
+  .progress-bar-wrap {
+    height: 3px; background: var(--border);
+    border-radius: 99px; margin-top: 8px; overflow: hidden;
+  }
+
+  .progress-bar-fill {
+    height: 100%; border-radius: 99px;
+    background: #4a8c6a;
+    transition: width 0.4s ease;
+  }
+
+  .week-summary {
+    display: flex; gap: 8px; margin-bottom: 1.25rem; flex-wrap: wrap;
+  }
+
+  .week-stat {
+    flex: 1; min-width: 100px;
+    background: var(--surface); border: 0.5px solid var(--border);
+    border-radius: var(--radius); padding: 10px 12px;
+  }
+
+  .week-stat-val {
+    font-size: 20px; font-weight: 600; color: var(--text);
+  }
+
+  .week-stat-lbl {
+    font-size: 11px; color: var(--muted); margin-top: 2px;
+  }
+
+  .week-heading {
+    font-size: 14px; font-weight: 600; color: var(--text);
+    margin-bottom: 0.5rem;
+  }
+
+  .week-desc {
+    font-size: 13px; color: var(--muted);
+    margin-bottom: 1rem; line-height: 1.6;
+  }
+
+  .col-progress {
+    height: 2px; background: var(--border);
+    border-radius: 99px; margin-top: 10px; overflow: hidden;
+  }
+
+  .col-progress-fill {
+    height: 100%; border-radius: 99px; background: #4a8c6a;
+    transition: width 0.4s;
+  }
+
+  .empty-col {
+    font-size: 12px; color: var(--hint);
+    text-align: center; padding: 12px 0;
+  }
+</style>
+
+<div class="root">
+
+<div class="top-bar">
+  <div class="board-title">
+    <div class="board-dot"></div>
+    Scenté Backend — 4-Week Sprint
+  </div>
+  <div class="controls">
+    <div class="week-tabs" id="weekTabs"></div>
+  </div>
+</div>
+
+<div id="weekMeta"></div>
+
+<div class="filter-row" id="filterRow">
+  <span class="filter-label">Filter:</span>
+</div>
+
+<div class="board" id="board"></div>
+
+</div>
+
+<script>
+const MEMBERS = [
+  { id: 'jori',   name: 'Jori',   role: 'Team Lead', color: '#d4808a', bg: '#fbeaf0' },
+  { id: 'sara',   name: 'Sara',   role: 'Admin',     color: '#185fa5', bg: '#e0edfb' },
+  { id: 'sibo',   name: 'Sibo',   role: 'Details',   color: '#3b6d11', bg: '#eaf3de' },
+  { id: 'jasi',   name: 'Jasi',   role: 'Auth',      color: '#534ab7', bg: '#f0ecfe' },
+  { id: 'kristi', name: 'Kristi', role: 'Orders',    color: '#993556', bg: '#fbeaf0' },
+  { id: 'ari',    name: 'Ari',    role: 'Cart',      color: '#854f0b', bg: '#faeeda' },
+  { id: 'klea',   name: 'Klea',   role: 'Shop',      color: '#0f6e56', bg: '#e1f5ee' },
+  { id: 'idi',    name: 'Idi',    role: 'Checkout',  color: '#993c1d', bg: '#faece7' },
+];
+
+const WEEKS = [
+  {
+    id: 1,
+    title: 'Week 1',
+    subtitle: 'Project Setup & Database',
+    desc: 'Set up the ASP.NET Core solution, configure Entity Framework Core, create the database schema, run migrations, seed perfume data, and build the first working endpoints.',
+    columns: [
+      {
+        id: 'foundation',
+        title: 'Foundation',
+        tasks: [
+          { id: 'w1-j1', title: 'Create ASP.NET Core Web API solution + GitHub repo', member: 'jori', tags: ['deploy'] },
+          { id: 'w1-j2', title: 'Configure EF Core with SQL Server + AppDbContext', member: 'jori', tags: ['db'] },
+          { id: 'w1-j3', title: 'Write ALL entity models (User, Product, Order, Cart, Wishlist, Review, PromoCode)', member: 'jori', tags: ['db'] },
+          { id: 'w1-j4', title: 'Run first EF Core migration and create the database', member: 'jori', tags: ['db'] },
+          { id: 'w1-j5', title: 'Seed 60+ perfumes from Parfumes.txt with notes', member: 'jori', tags: ['db'] },
+          { id: 'w1-j6', title: 'Write shared api.js (base URL, Bearer header, error handler)', member: 'jori', tags: ['fe'] },
+          { id: 'w1-j7', title: 'Set up branch protection + PR workflow on GitHub', member: 'jori', tags: ['deploy'] },
+        ]
+      },
+      {
+        id: 'auth-setup',
+        title: 'Auth',
+        tasks: [
+          { id: 'w1-ja1', title: 'POST /api/auth/register — hash password, save User to DB, return JWT', member: 'jasi', tags: ['api', 'auth'] },
+          { id: 'w1-ja2', title: 'POST /api/auth/login — verify BCrypt hash, return JWT', member: 'jasi', tags: ['api', 'auth'] },
+          { id: 'w1-ja3', title: 'Configure JWT in Program.cs (secret, expiry, issuer)', member: 'jasi', tags: ['auth'] },
+          { id: 'w1-ja4', title: 'Connect auth.js — store JWT on login, redirect on register', member: 'jasi', tags: ['fe'] },
+          { id: 'w1-ja5', title: 'Never return PasswordHash in any API response', member: 'jasi', tags: ['auth'] },
+        ]
+      },
+      {
+        id: 'products-setup',
+        title: 'Products API',
+        tasks: [
+          { id: 'w1-s1', title: 'GET /api/products — paginated list with filters (gender, brand, category, price, sort)', member: 'sibo', tags: ['api'] },
+          { id: 'w1-s2', title: 'GET /api/products/{id} — single product with topNotes, middleNotes, baseNotes', member: 'sibo', tags: ['api', 'db'] },
+          { id: 'w1-s3', title: 'Connect details.js — fetch product from API via ?id= param', member: 'sibo', tags: ['fe'] },
+          { id: 'w1-s4', title: 'Handle 404 — API returns 404, page shows friendly error', member: 'sibo', tags: ['api', 'fe'] },
+        ]
+      },
+      {
+        id: 'admin-setup',
+        title: 'Admin API',
+        tasks: [
+          { id: 'w1-sa1', title: 'AdminController with [Authorize(Roles="Admin")] on all routes', member: 'sara', tags: ['auth', 'api'] },
+          { id: 'w1-sa2', title: 'GET /api/admin/products — paginated product list from DB', member: 'sara', tags: ['api', 'db'] },
+          { id: 'w1-sa3', title: 'POST /api/admin/products — create product, save to DB', member: 'sara', tags: ['api', 'db'] },
+          { id: 'w1-sa4', title: 'PUT /api/admin/products/{id} — update product in DB', member: 'sara', tags: ['api', 'db'] },
+          { id: 'w1-sa5', title: 'DELETE /api/admin/products/{id} — delete from DB', member: 'sara', tags: ['api', 'db'] },
+          { id: 'w1-sa6', title: 'GET /api/admin/stats — totalProducts, totalOrders, totalUsers, totalRevenue', member: 'sara', tags: ['api'] },
+          { id: 'w1-sa7', title: 'Connect admin.js product CRUD to these endpoints', member: 'sara', tags: ['fe'] },
+        ]
+      },
+      {
+        id: 'profile-setup',
+        title: 'Profile API',
+        tasks: [
+          { id: 'w1-k1', title: 'GET /api/users/me — logged-in user profile from DB (no password)', member: 'kristi', tags: ['api', 'auth'] },
+          { id: 'w1-k2', title: 'PUT /api/users/me — update FirstName + LastName in DB', member: 'kristi', tags: ['api', 'db'] },
+          { id: 'w1-k3', title: 'PUT /api/users/me/password — verify old, hash new, save to DB', member: 'kristi', tags: ['api', 'auth'] },
+          { id: 'w1-k4', title: 'Connect profile.js to load and save profile via API', member: 'kristi', tags: ['fe'] },
+        ]
+      },
+      {
+        id: 'cart-setup',
+        title: 'Cart API',
+        tasks: [
+          { id: 'w1-a1', title: 'GET /api/cart — user cart with CartItems joined with Product data', member: 'ari', tags: ['api', 'db'] },
+          { id: 'w1-a2', title: 'POST /api/cart/items — add item (same product+size → increment qty)', member: 'ari', tags: ['api', 'db'] },
+          { id: 'w1-a3', title: 'DELETE /api/cart/items/{id} — remove CartItem from DB', member: 'ari', tags: ['api', 'db'] },
+          { id: 'w1-a4', title: 'PATCH /api/cart/items/{id} — update quantity in DB', member: 'ari', tags: ['api', 'db'] },
+          { id: 'w1-a5', title: 'Connect cart.js and cartDetails.js to use these endpoints', member: 'ari', tags: ['fe'] },
+        ]
+      },
+      {
+        id: 'shop-setup',
+        title: 'Shop Filters',
+        tasks: [
+          { id: 'w1-kl1', title: 'GET /api/brands — distinct brand names from Products table', member: 'klea', tags: ['api', 'db'] },
+          { id: 'w1-kl2', title: 'Confirm all filter params work in GET /api/products (Postman tests)', member: 'klea', tags: ['api'] },
+          { id: 'w1-kl3', title: 'Connect shop.js — all filtering server-side via query params', member: 'klea', tags: ['fe'] },
+          { id: 'w1-kl4', title: 'Pagination metadata (totalPages, totalResults) comes from API', member: 'klea', tags: ['api', 'fe'] },
+        ]
+      },
+      {
+        id: 'checkout-setup',
+        title: 'Orders API',
+        tasks: [
+          { id: 'w1-i1', title: 'POST /api/orders — create Order + OrderItems from cart, clear cart, return orderNumber', member: 'idi', tags: ['api', 'db'] },
+          { id: 'w1-i2', title: 'Order status defaults to "pending" on creation', member: 'idi', tags: ['db'] },
+          { id: 'w1-i3', title: 'Connect checkout.js to POST to endpoint (replace localStorage)', member: 'idi', tags: ['fe'] },
+          { id: 'w1-i4', title: 'Confirmation modal shows real orderNumber from API response', member: 'idi', tags: ['fe'] },
+        ]
+      },
+    ]
+  },
+  {
+    id: 2,
+    title: 'Week 2',
+    subtitle: 'Core Features Per Page',
+    desc: 'Connect all frontend pages to the real API. Replace remaining localStorage reads. Build wishlist, reviews, promo codes, and full order history.',
+    columns: [
+      {
+        id: 'w2-homepage',
+        title: 'Homepage & Shared',
+        tasks: [
+          { id: 'w2-j1', title: 'Featured products load from GET /api/products?pageSize=4', member: 'jori', tags: ['fe', 'api'] },
+          { id: 'w2-j2', title: 'Cart badge from GET /api/cart item count (not localStorage)', member: 'jori', tags: ['fe'] },
+          { id: 'w2-j3', title: 'Shared error handler in api.js (401→login, 500→toast)', member: 'jori', tags: ['fe'] },
+          { id: 'w2-j4', title: 'api.js auto-attaches JWT Bearer header to all protected requests', member: 'jori', tags: ['fe', 'auth'] },
+          { id: 'w2-j5', title: 'Review and merge all Week 1 PRs, fix integration issues', member: 'jori', tags: ['deploy'] },
+        ]
+      },
+      {
+        id: 'w2-admin',
+        title: 'Admin — Orders & Users',
+        tasks: [
+          { id: 'w2-sa1', title: 'GET /api/admin/orders — all orders with customer, date, status (?search=)', member: 'sara', tags: ['api', 'db'] },
+          { id: 'w2-sa2', title: 'PUT /api/admin/orders/{id}/status — update order status in DB', member: 'sara', tags: ['api', 'db'] },
+          { id: 'w2-sa3', title: 'GET /api/admin/orders/{id} — single order with all OrderItems', member: 'sara', tags: ['api', 'db'] },
+          { id: 'w2-sa4', title: 'GET /api/admin/users — all users (?search= param)', member: 'sara', tags: ['api', 'db'] },
+          { id: 'w2-sa5', title: 'Connect admin.js orders table and users table to endpoints', member: 'sara', tags: ['fe'] },
+        ]
+      },
+      {
+        id: 'w2-reviews',
+        title: 'Reviews',
+        tasks: [
+          { id: 'w2-s1', title: 'GET /api/products/{id}/reviews — reviews + star average from DB', member: 'sibo', tags: ['api', 'db'] },
+          { id: 'w2-s2', title: 'POST /api/products/{id}/reviews — save review (requires auth)', member: 'sibo', tags: ['api', 'auth'] },
+          { id: 'w2-s3', title: 'Wire write-a-review form on details.html to POST endpoint', member: 'sibo', tags: ['fe'] },
+          { id: 'w2-s4', title: 'Load and display reviews + star average from API on page load', member: 'sibo', tags: ['fe'] },
+        ]
+      },
+      {
+        id: 'w2-wishlist',
+        title: 'Wishlist',
+        tasks: [
+          { id: 'w2-ja1', title: 'GET /api/wishlist — user wishlist with full product data from DB', member: 'jasi', tags: ['api', 'db'] },
+          { id: 'w2-ja2', title: 'POST /api/wishlist/{productId} — add product to wishlist in DB', member: 'jasi', tags: ['api', 'db'] },
+          { id: 'w2-ja3', title: 'DELETE /api/wishlist/{productId} — remove from wishlist in DB', member: 'jasi', tags: ['api', 'db'] },
+          { id: 'w2-ja4', title: 'Connect wishlist.js — replace localStorage wishlist reads/writes', member: 'jasi', tags: ['fe'] },
+          { id: 'w2-ja5', title: 'Heart icons sync with DB wishlist state on page load', member: 'jasi', tags: ['fe'] },
+        ]
+      },
+      {
+        id: 'w2-orders',
+        title: 'Order History',
+        tasks: [
+          { id: 'w2-k1', title: 'GET /api/orders — user orders from DB (?status= filter)', member: 'kristi', tags: ['api', 'db'] },
+          { id: 'w2-k2', title: 'GET /api/orders/{id} — single order detail with items from DB', member: 'kristi', tags: ['api', 'db'] },
+          { id: 'w2-k3', title: 'Connect order.js — load real orders from API', member: 'kristi', tags: ['fe'] },
+          { id: 'w2-k4', title: 'Tab filter passes ?status= to API; search passes ?search=', member: 'kristi', tags: ['fe', 'api'] },
+          { id: 'w2-k5', title: 'Order counts per tab come from API response counts', member: 'kristi', tags: ['fe'] },
+        ]
+      },
+      {
+        id: 'w2-promo',
+        title: 'Cart — Promo',
+        tasks: [
+          { id: 'w2-a1', title: 'DELETE /api/cart — clear entire cart in DB after order', member: 'ari', tags: ['api', 'db'] },
+          { id: 'w2-a2', title: 'POST /api/cart/promo — validate promo code against PromoCodes table', member: 'ari', tags: ['api', 'db'] },
+          { id: 'w2-a3', title: 'Seed 3 promo codes (SCENTE10, SUMMER20, VIP30) in DB', member: 'ari', tags: ['db'] },
+          { id: 'w2-a4', title: 'Connect promo input to POST endpoint (replace hardcoded JS)', member: 'ari', tags: ['fe'] },
+          { id: 'w2-a5', title: 'Subtotal, shipping, discount, total recalculate from API response', member: 'ari', tags: ['fe'] },
+        ]
+      },
+      {
+        id: 'w2-shop',
+        title: 'Shop Filters — Live',
+        tasks: [
+          { id: 'w2-kl1', title: 'All filter combinations pass correctly as query params to API', member: 'klea', tags: ['fe', 'api'] },
+          { id: 'w2-kl2', title: 'URL stays bookmarkable (?cat=women, ?brand=Creed still work)', member: 'klea', tags: ['fe'] },
+          { id: 'w2-kl3', title: 'Connect GET /api/brands to populate brand filter UI', member: 'klea', tags: ['fe', 'api'] },
+          { id: 'w2-kl4', title: 'Zero results: API returns [] → show "No products found"', member: 'klea', tags: ['fe'] },
+          { id: 'w2-kl5', title: 'Pagination buttons generated from totalPages in API response', member: 'klea', tags: ['fe'] },
+        ]
+      },
+      {
+        id: 'w2-checkout',
+        title: 'Checkout Logic',
+        tasks: [
+          { id: 'w2-i1', title: 'Shipping cost enforced SERVER-SIDE (free >$50, $15 flat)', member: 'idi', tags: ['api'] },
+          { id: 'w2-i2', title: 'Order total validation server-side (ignore client total, recalculate from DB)', member: 'idi', tags: ['api', 'db'] },
+          { id: 'w2-i3', title: 'GET /api/orders/{orderNumber}/confirmation — order summary for modal', member: 'idi', tags: ['api'] },
+          { id: 'w2-i4', title: 'Full flow test: cart → checkout → order in DB → cart cleared → modal', member: 'idi', tags: ['test'] },
+        ]
+      },
+    ]
+  },
+  {
+    id: 3,
+    title: 'Week 3',
+    subtitle: 'Integration, Security & Extra Features',
+    desc: 'Add auth guards, rate limiting, PDF invoices, email confirmation, password reset, related products, stock validation, and full-text search.',
+    columns: [
+      {
+        id: 'w3-guards',
+        title: 'Auth Guards',
+        tasks: [
+          { id: 'w3-j1', title: 'Frontend auth guards on checkout, profile, order, wishlist pages', member: 'jori', tags: ['fe', 'auth'] },
+          { id: 'w3-j2', title: 'JWT expiry in api.js — 401 response clears token + redirects', member: 'jori', tags: ['fe', 'auth'] },
+          { id: 'w3-j3', title: 'Swagger/OpenAPI docs on all controllers (XML comments + response types)', member: 'jori', tags: ['deploy'] },
+          { id: 'w3-j4', title: 'README.md — setup instructions, env variables, migration steps', member: 'jori', tags: ['deploy'] },
+        ]
+      },
+      {
+        id: 'w3-admin-search',
+        title: 'Admin Search',
+        tasks: [
+          { id: 'w3-sa1', title: 'Server-side search on orders (?search= matches orderNumber OR customer)', member: 'sara', tags: ['api', 'db'] },
+          { id: 'w3-sa2', title: 'Server-side search on users (?search= matches name OR email)', member: 'sara', tags: ['api', 'db'] },
+          { id: 'w3-sa3', title: 'Server-side search on products (?search= matches name OR brand)', member: 'sara', tags: ['api', 'db'] },
+          { id: 'w3-sa4', title: 'Seed admin account in DB migration (role = "Admin")', member: 'sara', tags: ['db'] },
+          { id: 'w3-sa5', title: 'Test all admin routes return 403 with non-admin JWT', member: 'sara', tags: ['test', 'auth'] },
+        ]
+      },
+      {
+        id: 'w3-related',
+        title: 'Related Products',
+        tasks: [
+          { id: 'w3-s1', title: 'Stock validation in POST /api/cart/items — 0 stock → 400 "Out of stock"', member: 'sibo', tags: ['api', 'db'] },
+          { id: 'w3-s2', title: 'GET /api/products/related/{id} — 4 products same brand/gender', member: 'sibo', tags: ['api', 'db'] },
+          { id: 'w3-s3', title: 'Connect related products section on details.html', member: 'sibo', tags: ['fe'] },
+          { id: 'w3-s4', title: 'Handle product image errors gracefully on details page', member: 'sibo', tags: ['fe'] },
+        ]
+      },
+      {
+        id: 'w3-reset',
+        title: 'Password Reset',
+        tasks: [
+          { id: 'w3-ja1', title: 'POST /api/auth/forgot-password — check email in DB, generate reset token with expiry', member: 'jasi', tags: ['api', 'db', 'auth'] },
+          { id: 'w3-ja2', title: 'POST /api/auth/reset-password — validate token, update PasswordHash, delete token', member: 'jasi', tags: ['api', 'db', 'auth'] },
+          { id: 'w3-ja3', title: 'Rate limiting on POST /api/auth/login — max 5/min per IP', member: 'jasi', tags: ['api', 'auth'] },
+          { id: 'w3-ja4', title: 'Unique email constraint at DB level (migration + unique index)', member: 'jasi', tags: ['db'] },
+        ]
+      },
+      {
+        id: 'w3-invoice',
+        title: 'Invoice PDF',
+        tasks: [
+          { id: 'w3-k1', title: 'GET /api/orders/{id}/invoice — PDF via QuestPDF (items, total, date)', member: 'kristi', tags: ['api', 'db'] },
+          { id: 'w3-k2', title: 'Connect invoice download button in order.html', member: 'kristi', tags: ['fe'] },
+          { id: 'w3-k3', title: 'GET /api/orders/counts — counts per status for tab badges', member: 'kristi', tags: ['api', 'db'] },
+          { id: 'w3-k4', title: 'Test user can only see their OWN orders (others return 403)', member: 'kristi', tags: ['test', 'auth'] },
+        ]
+      },
+      {
+        id: 'w3-guest-cart',
+        title: 'Guest Cart',
+        tasks: [
+          { id: 'w3-a1', title: 'Guest cart via guestCartId cookie (no login required)', member: 'ari', tags: ['api', 'db'] },
+          { id: 'w3-a2', title: 'POST /api/cart/merge — merge guest cart into user cart on login', member: 'ari', tags: ['api', 'db'] },
+          { id: 'w3-a3', title: 'GET /api/cart/count — return item count only (for navbar badge)', member: 'ari', tags: ['api'] },
+          { id: 'w3-a4', title: 'Cart item validation: flag out-of-stock items that were added earlier', member: 'ari', tags: ['api', 'db'] },
+        ]
+      },
+      {
+        id: 'w3-search',
+        title: 'Full-Text Search',
+        tasks: [
+          { id: 'w3-kl1', title: 'GET /api/products/search?q= — search name, brand, description in DB', member: 'klea', tags: ['api', 'db'] },
+          { id: 'w3-kl2', title: 'Connect navbar search (performSearch) to this endpoint', member: 'klea', tags: ['fe'] },
+          { id: 'w3-kl3', title: 'Test all filter combinations with real DB data', member: 'klea', tags: ['test'] },
+          { id: 'w3-kl4', title: 'GET /api/products with no filters returns all products paginated', member: 'klea', tags: ['api', 'test'] },
+        ]
+      },
+      {
+        id: 'w3-email',
+        title: 'Order Email',
+        tasks: [
+          { id: 'w3-i1', title: 'Integrate MailKit — send confirmation email on POST /api/orders', member: 'idi', tags: ['email', 'api'] },
+          { id: 'w3-i2', title: 'Email includes order number, items, total, estimated delivery', member: 'idi', tags: ['email'] },
+          { id: 'w3-i3', title: 'Email credentials in environment variables (never hardcoded)', member: 'idi', tags: ['deploy'] },
+          { id: 'w3-i4', title: 'Empty cart → 400 error with clear message (server-side)', member: 'idi', tags: ['api'] },
+          { id: 'w3-i5', title: 'Server-side address validation (city, country, phone required)', member: 'idi', tags: ['api'] },
+        ]
+      },
+    ]
+  },
+  {
+    id: 4,
+    title: 'Week 4',
+    subtitle: 'Testing, Fixes & Deployment',
+    desc: 'Write unit and integration tests, fix bugs found during testing, deploy to Azure, and verify the full live purchase flow end-to-end.',
+    columns: [
+      {
+        id: 'w4-deploy',
+        title: 'Deployment',
+        tasks: [
+          { id: 'w4-j1', title: 'Deploy API to Azure App Service + Azure SQL Database', member: 'jori', tags: ['deploy'] },
+          { id: 'w4-j2', title: 'Configure environment variables on server (conn string, JWT secret, email)', member: 'jori', tags: ['deploy'] },
+          { id: 'w4-j3', title: 'Update api.js BASE_URL to point to deployed API', member: 'jori', tags: ['fe', 'deploy'] },
+          { id: 'w4-j4', title: 'E2E test: register → login → browse → cart → checkout → order history', member: 'jori', tags: ['test'] },
+          { id: 'w4-j5', title: 'Final code review of all branches before merge to main', member: 'jori', tags: ['deploy'] },
+          { id: 'w4-j6', title: 'Share live URL with the team', member: 'jori', tags: ['deploy'] },
+        ]
+      },
+      {
+        id: 'w4-admin-test',
+        title: 'Admin Tests',
+        tasks: [
+          { id: 'w4-sa1', title: 'Unit tests for all 4 product CRUD endpoints', member: 'sara', tags: ['test'] },
+          { id: 'w4-sa2', title: 'Unit tests for order status update endpoint', member: 'sara', tags: ['test'] },
+          { id: 'w4-sa3', title: 'Verify Swagger docs complete for all admin routes', member: 'sara', tags: ['deploy'] },
+          { id: 'w4-sa4', title: 'Verify dashboard stats accurate against real DB data', member: 'sara', tags: ['test'] },
+          { id: 'w4-sa5', title: 'Fix any admin panel bugs from final testing', member: 'sara', tags: ['test'] },
+        ]
+      },
+      {
+        id: 'w4-product-test',
+        title: 'Product Detail Tests',
+        tasks: [
+          { id: 'w4-s1', title: 'Unit test GET /api/products/{id} — found + 404 cases', member: 'sibo', tags: ['test'] },
+          { id: 'w4-s2', title: 'Unit test POST /api/products/{id}/reviews — valid + unauthorized', member: 'sibo', tags: ['test', 'auth'] },
+          { id: 'w4-s3', title: 'Test all 60+ products load with real images and notes', member: 'sibo', tags: ['test'] },
+          { id: 'w4-s4', title: 'Test add-to-cart from detail page updates server-side cart', member: 'sibo', tags: ['test'] },
+          { id: 'w4-s5', title: 'Fix edge cases (missing notes, missing image, no reviews)', member: 'sibo', tags: ['test'] },
+        ]
+      },
+      {
+        id: 'w4-auth-test',
+        title: 'Auth Tests',
+        tasks: [
+          { id: 'w4-ja1', title: 'Unit test register — valid save, duplicate email blocked, weak password rejected', member: 'jasi', tags: ['test', 'auth'] },
+          { id: 'w4-ja2', title: 'Unit test login — correct creds → JWT, wrong password → 401', member: 'jasi', tags: ['test', 'auth'] },
+          { id: 'w4-ja3', title: 'Security: PasswordHash never in any API response', member: 'jasi', tags: ['test', 'auth'] },
+          { id: 'w4-ja4', title: 'Security: user cannot access another user\'s wishlist', member: 'jasi', tags: ['test', 'auth'] },
+          { id: 'w4-ja5', title: 'E2E test forgot-password and reset-password flow', member: 'jasi', tags: ['test'] },
+        ]
+      },
+      {
+        id: 'w4-orders-test',
+        title: 'Orders Tests',
+        tasks: [
+          { id: 'w4-k1', title: 'Unit test GET /api/orders — only current user\'s orders returned', member: 'kristi', tags: ['test', 'auth'] },
+          { id: 'w4-k2', title: 'Unit test PUT /api/users/me/password — correct old→updated, wrong→400', member: 'kristi', tags: ['test'] },
+          { id: 'w4-k3', title: 'Test invoice PDF correct items, prices, totals with real data', member: 'kristi', tags: ['test'] },
+          { id: 'w4-k4', title: 'Test order tab counts accurate after placing new orders', member: 'kristi', tags: ['test'] },
+          { id: 'w4-k5', title: 'Fix any profile save bugs from final testing', member: 'kristi', tags: ['test'] },
+        ]
+      },
+      {
+        id: 'w4-cart-test',
+        title: 'Cart Tests',
+        tasks: [
+          { id: 'w4-a1', title: 'Unit test add to cart — new item, duplicate increments, out-of-stock → 400', member: 'ari', tags: ['test'] },
+          { id: 'w4-a2', title: 'Unit test promo — valid code, invalid → 400, expired → 400', member: 'ari', tags: ['test'] },
+          { id: 'w4-a3', title: 'Test guest cart merges into user cart after login', member: 'ari', tags: ['test'] },
+          { id: 'w4-a4', title: 'Test cart fully cleared from DB after successful order', member: 'ari', tags: ['test'] },
+          { id: 'w4-a5', title: 'Fix cart badge issues on live deployment', member: 'ari', tags: ['test', 'deploy'] },
+        ]
+      },
+      {
+        id: 'w4-shop-test',
+        title: 'Shop Tests',
+        tasks: [
+          { id: 'w4-kl1', title: 'Unit tests for product listing — gender, price range, pagination', member: 'klea', tags: ['test'] },
+          { id: 'w4-kl2', title: 'Test search returns results for partial name and brand matches', member: 'klea', tags: ['test'] },
+          { id: 'w4-kl3', title: 'Cross-browser test: Chrome, Firefox, Safari — filters + pagination', member: 'klea', tags: ['test'] },
+          { id: 'w4-kl4', title: 'Mobile sidebar toggle works correctly with real API data', member: 'klea', tags: ['test'] },
+          { id: 'w4-kl5', title: 'Fix any filter combination bugs from final testing', member: 'klea', tags: ['test'] },
+        ]
+      },
+      {
+        id: 'w4-checkout-test',
+        title: 'Checkout Tests',
+        tasks: [
+          { id: 'w4-i1', title: 'Unit test POST /api/orders — saved, cart cleared, correct total', member: 'idi', tags: ['test'] },
+          { id: 'w4-i2', title: 'Unit test total validation — tampered client total ignored', member: 'idi', tags: ['test'] },
+          { id: 'w4-i3', title: 'Test confirmation email received with correct order details', member: 'idi', tags: ['test', 'email'] },
+          { id: 'w4-i4', title: 'Test checkout while logged out returns 401', member: 'idi', tags: ['test', 'auth'] },
+          { id: 'w4-i5', title: 'Fix checkout flow bugs on live deployment', member: 'idi', tags: ['test', 'deploy'] },
+        ]
+      },
+    ]
+  }
+];
+
+const TAG_META = {
+  api:    { label: 'API',     cls: 'tag-api' },
+  db:     { label: 'DB',      cls: 'tag-db' },
+  fe:     { label: 'Frontend', cls: 'tag-fe' },
+  auth:   { label: 'Auth',    cls: 'tag-auth' },
+  test:   { label: 'Test',    cls: 'tag-test' },
+  deploy: { label: 'Deploy',  cls: 'tag-deploy' },
+  email:  { label: 'Email',   cls: 'tag-email' },
+};
+
+let state = {
+  week: 1,
+  member: 'all',
+  checked: JSON.parse(localStorage.getItem('scente_trello') || '{}')
+};
+
+function save() {
+  localStorage.setItem('scente_trello', JSON.stringify(state.checked));
+}
+
+function getMember(id) {
+  return MEMBERS.find(m => m.id === id);
+}
+
+function buildWeekTabs() {
+  const container = document.getElementById('weekTabs');
+  container.innerHTML = WEEKS.map(w =>
+    `<button class="week-tab ${w.id === state.week ? 'active' : ''}" onclick="setWeek(${w.id})">${w.title}</button>`
+  ).join('');
+}
+
+function buildFilters() {
+  const row = document.getElementById('filterRow');
+  const allBtn = `<button class="member-pill ${state.member === 'all' ? 'active' : ''}" onclick="setMember('all')">All</button>`;
+  const memberBtns = MEMBERS.map(m =>
+    `<button class="member-pill ${state.member === m.id ? 'active' : ''}" onclick="setMember('${m.id}')" style="${state.member === m.id ? `background:${m.bg};border-color:${m.color};color:${m.color}` : ''}">${m.name}</button>`
+  ).join('');
+  row.innerHTML = `<span class="filter-label">Member:</span>${allBtn}${memberBtns}`;
+}
+
+function buildMeta() {
+  const week = WEEKS.find(w => w.id === state.week);
+  const allTasks = week.columns.flatMap(c => c.tasks);
+  const visible = state.member === 'all' ? allTasks : allTasks.filter(t => t.member === state.member);
+  const done = visible.filter(t => state.checked[t.id]).length;
+  const pct = visible.length ? Math.round((done / visible.length) * 100) : 0;
+
+  document.getElementById('weekMeta').innerHTML = `
+    <div class="week-heading">${week.title} — ${week.subtitle}</div>
+    <div class="week-desc">${week.desc}</div>
+    <div class="week-summary">
+      <div class="week-stat"><div class="week-stat-val">${visible.length}</div><div class="week-stat-lbl">Total tasks</div></div>
+      <div class="week-stat"><div class="week-stat-val" style="color:#4a8c6a">${done}</div><div class="week-stat-lbl">Completed</div></div>
+      <div class="week-stat"><div class="week-stat-val" style="color:#d4808a">${visible.length - done}</div><div class="week-stat-lbl">Remaining</div></div>
+      <div class="week-stat">
+        <div class="week-stat-val">${pct}%</div>
+        <div class="week-stat-lbl">Progress</div>
+        <div class="progress-bar-wrap" style="margin-top:6px"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
+      </div>
+    </div>
+  `;
+}
+
+function buildBoard() {
+  const week = WEEKS.find(w => w.id === state.week);
+  const board = document.getElementById('board');
+
+  board.innerHTML = week.columns.map(col => {
+    const tasks = state.member === 'all'
+      ? col.tasks
+      : col.tasks.filter(t => t.member === state.member);
+
+    if (tasks.length === 0) return '';
+
+    const doneCount = tasks.filter(t => state.checked[t.id]).length;
+    const pct = tasks.length ? Math.round((doneCount / tasks.length) * 100) : 0;
+
+    const taskHTML = tasks.map(task => {
+      const checked = !!state.checked[task.id];
+      const member = getMember(task.member);
+      const tags = task.tags.map(tag => {
+        const t = TAG_META[tag];
+        return t ? `<span class="tag ${t.cls}">${t.label}</span>` : '';
+      }).join('');
+
+      return `
+        <div class="task-card ${checked ? 'done' : ''}" id="card-${task.id}">
+          <div class="task-top">
+            <span class="task-title">${task.title}</span>
+            <button class="check-btn ${checked ? 'checked' : ''}" onclick="toggleTask('${task.id}')" title="Mark complete"></button>
+          </div>
+          <div class="task-meta">
+            ${tags}
+            <div class="member-badge" style="background:${member.bg};color:${member.color}" title="${member.name}">${member.name.slice(0,2).toUpperCase()}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="column">
+        <div class="col-header">
+          <span class="col-title">${col.title}</span>
+          <span class="col-count">${doneCount}/${tasks.length}</span>
+        </div>
+        ${taskHTML || '<div class="empty-col">No tasks</div>'}
+        <div class="col-progress"><div class="col-progress-fill" style="width:${pct}%"></div></div>
+      </div>
+    `;
+  }).join('');
+}
+
+function render() {
+  buildWeekTabs();
+  buildFilters();
+  buildMeta();
+  buildBoard();
+}
+
+function setWeek(w) {
+  state.week = w;
+  render();
+}
+
+function setMember(m) {
+  state.member = m;
+  render();
+}
+
+function toggleTask(id) {
+  state.checked[id] = !state.checked[id];
+  save();
+  render();
+}
+
+render();
+</script>
