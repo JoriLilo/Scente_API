@@ -2,4 +2,5 @@ bin/
 obj/
 *.user
 .DS_Store
+appsettings.json
 appsettings.Development.json
