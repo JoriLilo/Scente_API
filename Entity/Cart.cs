@@ -7,6 +7,6 @@ public class Cart
     public User User { get; set; } = null!;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-    // Navigation: a cart can have multiple items
-    public ICollection<Product> Items { get; set; } = new List<Product>();
+    // Navigation: cart items (replaces the wrong ICollection<Product>)
+    public ICollection<CartItem> Items { get; set; } = new List<CartItem>();
 }
