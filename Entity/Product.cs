@@ -13,11 +13,11 @@ public class Product
     public string Description { get; set; } = string.Empty;
     public string Status { get; set; } = "active";
 
-    // Fragrance notes (stored as comma-separated strings)
+
     public string? TopNotes { get; set; }
     public string? MiddleNotes { get; set; }
     public string? BaseNotes { get; set; }
 
-    // Navigation: a product can have many volumes/prices
+   
     public ICollection<ProductVolume> Volumes { get; set; } = new List<ProductVolume>();
 }
