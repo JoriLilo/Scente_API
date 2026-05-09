@@ -8,5 +8,5 @@ public class Wishlist
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation: a wishlist can have multiple items
-    public ICollection<Product> Items { get; set; } = new List<Product>();
+     public ICollection<WishlistItem> Items { get; set; } = new List<WishlistItem>();
 }
