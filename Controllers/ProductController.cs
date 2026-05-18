@@ -102,4 +102,23 @@ public class ProductsController : ControllerBase
         await _db.SaveChangesAsync();
         return NoContent();
     }
+
+    // GET /api/products/search?q=
+[HttpGet("search")]
+public async Task<IActionResult> Search([FromQuery] string? q)
+{
+    if (string.IsNullOrEmpty(q))
+        return Ok(new List<Product>());
+
+    var products = await _db.Products
+        .Include(p => p.Volumes)
+        .Where(p => p.Status == "active" &&
+            (p.Name.Contains(q) ||
+             p.Brand.Contains(q) ||
+             p.Description.Contains(q)))
+        .OrderBy(p => p.Id)
+        .ToListAsync();
+
+    return Ok(products);
+}
 }
