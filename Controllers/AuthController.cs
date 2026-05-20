@@ -7,6 +7,7 @@ using Scente.API.Entity;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Scente.API.Controllers;
 
@@ -67,6 +68,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
+    [EnableRateLimiting("login")]
     public async Task<IActionResult> Login(LoginDto dto)
     {
         var user = await _db.Users
@@ -133,4 +135,73 @@ public class AuthController : ControllerBase
         return new JwtSecurityTokenHandler()
             .WriteToken(token);
     }
+
+    [HttpPost("forgot-password")]
+public async Task<IActionResult> ForgotPassword(ForgotPasswordDto dto)
+{
+    var user = await _db.Users
+        .FirstOrDefaultAsync(u => u.Email == dto.Email);
+
+    if (user == null)
+    {
+        return BadRequest(new
+        {
+            message = "User not found"
+        });
+    }
+
+    var token = Guid.NewGuid().ToString();
+
+    var resetToken = new PasswordResetToken
+    {
+        Token = token,
+        UserId = user.Id,
+        ExpiresAt = DateTime.UtcNow.AddHours(1)
+    };
+
+    _db.PasswordResetTokens.Add(resetToken);
+
+    await _db.SaveChangesAsync();
+
+    return Ok(new
+    {
+        resetToken = token
+    });
+}
+
+[HttpPost("reset-password")]
+public async Task<IActionResult> ResetPassword(ResetPasswordDto dto)
+{
+    var resetToken = await _db.PasswordResetTokens
+        .Include(t => t.User)
+        .FirstOrDefaultAsync(t => t.Token == dto.Token);
+
+    if (resetToken == null)
+    {
+        return BadRequest(new
+        {
+            message = "Invalid token"
+        });
+    }
+
+    if (resetToken.ExpiresAt < DateTime.UtcNow)
+    {
+        return BadRequest(new
+        {
+            message = "Token expired"
+        });
+    }
+
+    resetToken.User.PasswordHash =
+        BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+
+    _db.PasswordResetTokens.Remove(resetToken);
+
+    await _db.SaveChangesAsync();
+
+    return Ok(new
+    {
+        message = "Password reset successful"
+    });
+}
 }

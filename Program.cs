@@ -4,6 +4,8 @@ using Microsoft.IdentityModel.Tokens;
 using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
 using Scente.API.Data;
 using System.Text;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -99,6 +101,28 @@ builder.Services.AddAuthentication(options =>
             )
         };
 });
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("login", limiterOptions =>
+    {
+        limiterOptions.PermitLimit = 5;
+        limiterOptions.Window = TimeSpan.FromMinutes(1);
+        limiterOptions.QueueProcessingOrder =
+            QueueProcessingOrder.OldestFirst;
+
+        limiterOptions.QueueLimit = 0;
+    });
+
+    options.OnRejected = async (context, token) =>
+    {
+        context.HttpContext.Response.StatusCode = 429;
+
+        await context.HttpContext.Response.WriteAsync(
+            "Too many login attempts. Try again later.",
+            token);
+    };
+});
+
 
 var app = builder.Build();
 
@@ -110,6 +134,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("FrontendPolicy");
 
+app.UseRateLimiter();
+
 app.UseAuthentication();
 
 app.UseAuthorization();
@@ -117,3 +143,4 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
