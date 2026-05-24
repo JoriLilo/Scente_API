@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Scente.API.Data;
 
@@ -11,9 +12,11 @@ using Scente.API.Data;
 namespace Scente.API.Migrations
 {
     [DbContext(typeof(ScenteDbContext))]
-    partial class ScenteDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260520130702_AddPasswordResetTokens")]
+    partial class AddPasswordResetTokens
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -174,31 +177,6 @@ namespace Scente.API.Migrations
                     b.HasIndex("ProductId");
 
                     b.ToTable("OrderItems");
-                });
-
-            modelBuilder.Entity("Scente.API.Entity.PasswordResetToken", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("ExpiresAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("Token")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("PasswordResetTokens");
                 });
 
             modelBuilder.Entity("Scente.API.Entity.Product", b =>
@@ -2107,17 +2085,6 @@ namespace Scente.API.Migrations
                     b.Navigation("Order");
 
                     b.Navigation("Product");
-                });
-
-            modelBuilder.Entity("Scente.API.Entity.PasswordResetToken", b =>
-                {
-                    b.HasOne("Scente.API.Entity.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Scente.API.Entity.ProductVolume", b =>
