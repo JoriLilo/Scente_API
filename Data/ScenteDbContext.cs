@@ -18,6 +18,7 @@ public class ScenteDbContext : DbContext
     public DbSet<WishlistItem> WishlistItems => Set<WishlistItem>();
     public DbSet<Review>       Reviews       => Set<Review>();
     public DbSet<PromoCode>    PromoCodes    => Set<PromoCode>();
+    public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -158,8 +159,13 @@ public class ScenteDbContext : DbContext
             e.HasIndex(p => p.Code).IsUnique();
             e.Property(p => p.DiscountRate).HasColumnType("decimal(5,2)");
         });
+        
+        modelBuilder.Entity<User>()
+            .HasIndex(u => u.Email)
+            .IsUnique();
 
         // ── Seed data ─────────────────────────────────────────────
-        SeedData.Seed(modelBuilder);
-    }
+        SeedData.Seed(modelBuilder);  
+    } 
 }
+

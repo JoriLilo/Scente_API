@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Scente.API.Data;
 using Scente.API.Entity;
@@ -7,6 +8,7 @@ using Scente.API.DTOs;
 namespace Scente.API.Controllers;
 
 [ApiController] //tells ASP.NET Core that this class is an API controller.
+[Authorize]
 [Route("api/admin")]//means all your endpoints start with /api/admin
 
 public class AdminController : ControllerBase
