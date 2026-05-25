@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Scente.API.Data;
+using Scente.API.DTOs;
 using Scente.API.Entity;
 using System.Security.Claims;
 
@@ -14,83 +15,65 @@ public class CartController : ControllerBase
 {
     private readonly ScenteDbContext _db;
 
-    public CartController(ScenteDbContext db)
-    {
-        _db = db;
-    }
+    public CartController(ScenteDbContext db) { _db = db; }
 
-    // =========================================================
-    // GET /api/cart
-    // Returns current user's cart with full product data
-    // =========================================================
     [HttpGet]
     public async Task<IActionResult> GetCart()
     {
         var userId = GetUserId();
 
         var cart = await _db.Carts
-            .Include(c => c.Items)
-            .ThenInclude(i => i.Product)
+            .Include(c => c.Items).ThenInclude(i => i.Product)
             .FirstOrDefaultAsync(c => c.UserId == userId);
 
         if (cart == null)
-        {
-            return Ok(new { items = new List<object>(), subtotal = 0 });
-        }
+            return Ok(new { items = new List<object>(), subtotal = 0, warnings = new List<string>() });
+
+        // Stock validation warnings (from cart/ari)
+        var warnings = cart.Items
+            .Where(i => i.Quantity > i.Product.Stock)
+            .Select(i => $"Only {i.Product.Stock} units of {i.Product.Name} left in stock.")
+            .ToList();
 
         var items = cart.Items.Select(i => new
         {
-            id      = i.Id,
-            name    = i.Product.Name,
-            brand   = i.Product.Brand,
-            price   = i.Price,
-            qty     = i.Quantity,
-            image   = i.Product.Image,
-            size    = i.Size,
+            id        = i.Id,
+            name      = i.Product.Name,
+            brand     = i.Product.Brand,
+            price     = i.Price,
+            qty       = i.Quantity,
+            image     = i.Product.Image,
+            size      = i.Size,
             productId = i.ProductId
         }).ToList();
 
         var subtotal = items.Sum(i => i.price * i.qty);
 
-        return Ok(new { items, subtotal });
+        return Ok(new { items, subtotal, warnings });
     }
 
-    // =========================================================
-    // GET /api/cart/count
-    // Returns total item count for navbar badge
-    // =========================================================
     [HttpGet("count")]
     public async Task<IActionResult> GetCount()
     {
         var userId = GetUserId();
 
-        var cart = await _db.Carts
-            .Include(c => c.Items)
-            .FirstOrDefaultAsync(c => c.UserId == userId);
-
-        var count = cart?.Items.Sum(i => i.Quantity) ?? 0;
+        // Efficient DB-level sum (from cart/ari)
+        var count = await _db.CartItems
+            .Where(i => i.Cart.UserId == userId)
+            .SumAsync(i => i.Quantity);
 
         return Ok(new { count });
     }
 
-    // =========================================================
-    // POST /api/cart/items
-    // Add item to cart (duplicate product+size increments qty)
-    // =========================================================
     [HttpPost("items")]
     public async Task<IActionResult> AddItem([FromBody] AddCartItemDto dto)
     {
         var userId = GetUserId();
 
-        // Validate product exists and has stock
         var product = await _db.Products.FindAsync(dto.ProductId);
-        if (product == null)
-            return NotFound(new { message = "Product not found" });
+        if (product == null) return NotFound(new { message = "Product not found" });
+        if (product.Stock <= 0) return BadRequest(new { message = "Out of stock" });
 
-        if (product.Stock <= 0)
-            return BadRequest(new { message = "Out of stock" });
-
-        // Get or create cart
         var cart = await _db.Carts
             .Include(c => c.Items)
             .FirstOrDefaultAsync(c => c.UserId == userId);
@@ -102,7 +85,6 @@ public class CartController : ControllerBase
             await _db.SaveChangesAsync();
         }
 
-        // Check if same product+size already in cart
         var existing = cart.Items.FirstOrDefault(i =>
             i.ProductId == dto.ProductId && i.Size == dto.Size);
 
@@ -112,7 +94,6 @@ public class CartController : ControllerBase
         }
         else
         {
-            // Determine price: use volume price if available, else product base price
             decimal price = product.Price;
             if (!string.IsNullOrEmpty(dto.Size))
             {
@@ -132,14 +113,9 @@ public class CartController : ControllerBase
         }
 
         await _db.SaveChangesAsync();
-
         return Ok(new { message = "Added to cart" });
     }
 
-    // =========================================================
-    // PATCH /api/cart/items/{id}
-    // Update quantity of a cart item
-    // =========================================================
     [HttpPatch("items/{id}")]
     public async Task<IActionResult> UpdateItem(int id, [FromBody] UpdateCartItemDto dto)
     {
@@ -154,23 +130,20 @@ public class CartController : ControllerBase
         var item = cart.Items.FirstOrDefault(i => i.Id == id);
         if (item == null) return NotFound(new { message = "Item not found" });
 
+        // Stock check on update (from cart/ari)
+        var product = await _db.Products.FindAsync(item.ProductId);
+        if (product != null && dto.Quantity > product.Stock)
+            return BadRequest(new { message = $"Only {product.Stock} items available." });
+
         if (dto.Quantity <= 0)
-        {
             _db.CartItems.Remove(item);
-        }
         else
-        {
             item.Quantity = dto.Quantity;
-        }
 
         await _db.SaveChangesAsync();
         return Ok(new { message = "Updated" });
     }
 
-    // =========================================================
-    // DELETE /api/cart/items/{id}
-    // Remove a single item from cart
-    // =========================================================
     [HttpDelete("items/{id}")]
     public async Task<IActionResult> RemoveItem(int id)
     {
@@ -187,14 +160,9 @@ public class CartController : ControllerBase
 
         _db.CartItems.Remove(item);
         await _db.SaveChangesAsync();
-
         return Ok(new { message = "Removed" });
     }
 
-    // =========================================================
-    // DELETE /api/cart
-    // Clear entire cart (called after order is placed)
-    // =========================================================
     [HttpDelete]
     public async Task<IActionResult> ClearCart()
     {
@@ -208,14 +176,9 @@ public class CartController : ControllerBase
 
         _db.CartItems.RemoveRange(cart.Items);
         await _db.SaveChangesAsync();
-
         return Ok(new { message = "Cart cleared" });
     }
 
-    // =========================================================
-    // POST /api/cart/promo
-    // Validate a promo code
-    // =========================================================
     [HttpPost("promo")]
     public async Task<IActionResult> ValidatePromo([FromBody] PromoDto dto)
     {
@@ -236,9 +199,6 @@ public class CartController : ControllerBase
         });
     }
 
-    // =========================================================
-    // Helper — extract user ID from JWT
-    // =========================================================
     private int GetUserId()
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -246,11 +206,10 @@ public class CartController : ControllerBase
     }
 }
 
-// ── DTOs ──────────────────────────────────────────────────
 public class AddCartItemDto
 {
-    public int    ProductId { get; set; }
-    public string? Size     { get; set; }
+    public int     ProductId { get; set; }
+    public string? Size      { get; set; }
 }
 
 public class UpdateCartItemDto
