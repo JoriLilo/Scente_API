@@ -246,7 +246,7 @@ public class OrdersController : ControllerBase
     // Generates an order code: one letter + 14 digits.
     // (Same shape the old frontend used, e.g. "A12345678901234")
     // =========================================================
-    private static string GenerateOrderNumber()
+  
     private static string GenerateOrderNumber()
     {
         const string letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";

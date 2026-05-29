@@ -12,8 +12,8 @@ using Scente.API.Data;
 namespace Scente.API.Migrations
 {
     [DbContext(typeof(ScenteDbContext))]
-    [Migration("20260508195716_AddCartAndOrderTables")]
-    partial class AddCartAndOrderTables
+    [Migration("20260529200707_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -46,6 +46,164 @@ namespace Scente.API.Migrations
                     b.ToTable("Carts");
                 });
 
+            modelBuilder.Entity("Scente.API.Entity.CartItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CartId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Size")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CartId");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("CartItems");
+                });
+
+            modelBuilder.Entity("Scente.API.Entity.Order", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("City")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Country")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("OrderNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("PostalCode")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("ShippingAddress")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<decimal>("TotalPaid")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderNumber")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Orders");
+                });
+
+            modelBuilder.Entity("Scente.API.Entity.OrderItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ProductName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Size")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("OrderItems");
+                });
+
+            modelBuilder.Entity("Scente.API.Entity.PasswordResetToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("PasswordResetTokens");
+                });
+
             modelBuilder.Entity("Scente.API.Entity.Product", b =>
                 {
                     b.Property<int>("Id")
@@ -61,9 +219,6 @@ namespace Scente.API.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
-
-                    b.Property<int?>("CartId")
-                        .HasColumnType("int");
 
                     b.Property<string>("Category")
                         .IsRequired()
@@ -102,14 +257,7 @@ namespace Scente.API.Migrations
                     b.Property<string>("TopNotes")
                         .HasColumnType("longtext");
 
-                    b.Property<int?>("WishlistId")
-                        .HasColumnType("int");
-
                     b.HasKey("Id");
-
-                    b.HasIndex("CartId");
-
-                    b.HasIndex("WishlistId");
 
                     b.ToTable("Products");
 
@@ -1746,6 +1894,74 @@ namespace Scente.API.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Scente.API.Entity.PromoCode", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<decimal>("DiscountRate")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("tinyint(1)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("PromoCodes");
+                });
+
+            modelBuilder.Entity("Scente.API.Entity.Review", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AuthorName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Rating")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Reviews");
+                });
+
             modelBuilder.Entity("Scente.API.Entity.User", b =>
                 {
                     b.Property<int>("Id")
@@ -1761,14 +1977,16 @@ namespace Scente.API.Migrations
 
                     b.Property<string>("FirstName")
                         .IsRequired()
-                        .HasColumnType("longtext");
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
 
                     b.Property<DateTime>("JoinDate")
                         .HasColumnType("datetime(6)");
 
                     b.Property<string>("LastName")
                         .IsRequired()
-                        .HasColumnType("longtext");
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
@@ -1776,7 +1994,10 @@ namespace Scente.API.Migrations
 
                     b.Property<string>("Role")
                         .IsRequired()
-                        .HasColumnType("longtext");
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)")
+                        .HasDefaultValue("customer");
 
                     b.HasKey("Id");
 
@@ -1807,6 +2028,30 @@ namespace Scente.API.Migrations
                     b.ToTable("Wishlists");
                 });
 
+            modelBuilder.Entity("Scente.API.Entity.WishlistItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("WishlistId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("WishlistId", "ProductId")
+                        .IsUnique();
+
+                    b.ToTable("WishlistItems");
+                });
+
             modelBuilder.Entity("Scente.API.Entity.Cart", b =>
                 {
                     b.HasOne("Scente.API.Entity.User", "User")
@@ -1818,15 +2063,64 @@ namespace Scente.API.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Scente.API.Entity.Product", b =>
+            modelBuilder.Entity("Scente.API.Entity.CartItem", b =>
                 {
-                    b.HasOne("Scente.API.Entity.Cart", null)
+                    b.HasOne("Scente.API.Entity.Cart", "Cart")
                         .WithMany("Items")
-                        .HasForeignKey("CartId");
+                        .HasForeignKey("CartId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
-                    b.HasOne("Scente.API.Entity.Wishlist", null)
+                    b.HasOne("Scente.API.Entity.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Cart");
+
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("Scente.API.Entity.Order", b =>
+                {
+                    b.HasOne("Scente.API.Entity.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Scente.API.Entity.OrderItem", b =>
+                {
+                    b.HasOne("Scente.API.Entity.Order", "Order")
                         .WithMany("Items")
-                        .HasForeignKey("WishlistId");
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Scente.API.Entity.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("Scente.API.Entity.PasswordResetToken", b =>
+                {
+                    b.HasOne("Scente.API.Entity.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Scente.API.Entity.ProductVolume", b =>
@@ -1840,6 +2134,25 @@ namespace Scente.API.Migrations
                     b.Navigation("Product");
                 });
 
+            modelBuilder.Entity("Scente.API.Entity.Review", b =>
+                {
+                    b.HasOne("Scente.API.Entity.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Scente.API.Entity.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Scente.API.Entity.Wishlist", b =>
                 {
                     b.HasOne("Scente.API.Entity.User", "User")
@@ -1851,7 +2164,31 @@ namespace Scente.API.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Scente.API.Entity.WishlistItem", b =>
+                {
+                    b.HasOne("Scente.API.Entity.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Scente.API.Entity.Wishlist", "Wishlist")
+                        .WithMany("Items")
+                        .HasForeignKey("WishlistId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("Wishlist");
+                });
+
             modelBuilder.Entity("Scente.API.Entity.Cart", b =>
+                {
+                    b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("Scente.API.Entity.Order", b =>
                 {
                     b.Navigation("Items");
                 });

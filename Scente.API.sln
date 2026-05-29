@@ -1,11 +1,8 @@
-﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.2.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Scente.API", "Scente.API.csproj", "{6169BE03-F06D-31DF-ECE0-38079842A82B}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Scente.API.Tests", "..\Scente.API.Tests\Scente.API.Tests.csproj", "{097C8923-82C2-42C6-A28C-DD9309CC809F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -29,18 +26,6 @@ Global
 		{6169BE03-F06D-31DF-ECE0-38079842A82B}.Release|x64.Build.0 = Release|Any CPU
 		{6169BE03-F06D-31DF-ECE0-38079842A82B}.Release|x86.ActiveCfg = Release|Any CPU
 		{6169BE03-F06D-31DF-ECE0-38079842A82B}.Release|x86.Build.0 = Release|Any CPU
-		{097C8923-82C2-42C6-A28C-DD9309CC809F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{097C8923-82C2-42C6-A28C-DD9309CC809F}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{097C8923-82C2-42C6-A28C-DD9309CC809F}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{097C8923-82C2-42C6-A28C-DD9309CC809F}.Debug|x64.Build.0 = Debug|Any CPU
-		{097C8923-82C2-42C6-A28C-DD9309CC809F}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{097C8923-82C2-42C6-A28C-DD9309CC809F}.Debug|x86.Build.0 = Debug|Any CPU
-		{097C8923-82C2-42C6-A28C-DD9309CC809F}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{097C8923-82C2-42C6-A28C-DD9309CC809F}.Release|Any CPU.Build.0 = Release|Any CPU
-		{097C8923-82C2-42C6-A28C-DD9309CC809F}.Release|x64.ActiveCfg = Release|Any CPU
-		{097C8923-82C2-42C6-A28C-DD9309CC809F}.Release|x64.Build.0 = Release|Any CPU
-		{097C8923-82C2-42C6-A28C-DD9309CC809F}.Release|x86.ActiveCfg = Release|Any CPU
-		{097C8923-82C2-42C6-A28C-DD9309CC809F}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
