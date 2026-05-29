@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Scente.API.Data;
+using Scente.API.Documents;   // <-- ADDED (Kristi) for the PDF invoice
 using Scente.API.DTOs;
 using Scente.API.Entity;
 using System.Security.Claims;
@@ -95,9 +96,157 @@ public class OrdersController : ControllerBase
     }
 
     // =========================================================
+    // ===============  KRISTI'S ENDPOINTS BELOW  ==============
+    // =========================================================
+
+    // ---------- WEEK 2 ----------
+
+    // GET /api/orders?status=&search=
+    // Returns ONLY the logged-in user's orders.
+    // Tab filter -> ?status=,  search bar -> ?search=
+    [HttpGet]
+    public async Task<IActionResult> GetMyOrders(
+        [FromQuery] string? status,
+        [FromQuery] string? search)
+    {
+        var userId = GetUserId();
+
+        var query = _db.Orders
+            .Include(o => o.Items)
+            .Where(o => o.UserId == userId);
+
+        // "all" or empty = no status filter
+        if (!string.IsNullOrWhiteSpace(status) && status.ToLower() != "all")
+        {
+            var s = status.ToLower();
+            query = query.Where(o => o.Status.ToLower() == s);
+        }
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim();
+            query = query.Where(o => o.OrderNumber.Contains(term));
+        }
+
+        var orders = await query
+            .OrderByDescending(o => o.Date)
+            .Select(o => new OrderSummaryDto
+            {
+                Id          = o.Id,
+                OrderNumber = o.OrderNumber,
+                Date        = o.Date,
+                Status      = o.Status,
+                TotalPaid   = o.TotalPaid,
+                ItemCount   = o.Items.Count
+            })
+            .ToListAsync();
+
+        return Ok(orders);
+    }
+
+    // GET /api/orders/{id}
+    // Single order with its items. 403 if it's not yours.
+    [HttpGet("{id:int}")]
+    public async Task<IActionResult> GetOrderById(int id)
+    {
+        var userId = GetUserId();
+
+        var order = await _db.Orders
+            .Include(o => o.Items)
+            .FirstOrDefaultAsync(o => o.Id == id);
+
+        if (order == null)
+        {
+            return NotFound(new { message = "Order not found" });
+        }
+
+        // Security: you can only see your own orders
+        if (order.UserId != userId)
+        {
+            return StatusCode(403, new { message = "You can only view your own orders" });
+        }
+
+        var dto = new OrderDetailDto
+        {
+            Id              = order.Id,
+            OrderNumber     = order.OrderNumber,
+            Date            = order.Date,
+            Status          = order.Status,
+            PaymentMethod   = order.PaymentMethod,
+            TotalPaid       = order.TotalPaid,
+            ShippingAddress = order.ShippingAddress,
+            City            = order.City,
+            PostalCode      = order.PostalCode,
+            Country         = order.Country,
+            Phone           = order.Phone,
+            Items           = order.Items.Select(i => new OrderItemDto
+            {
+                ProductName = i.ProductName,
+                Price       = i.Price,
+                Quantity    = i.Quantity,
+                Size        = i.Size
+            }).ToList()
+        };
+
+        return Ok(dto);
+    }
+
+    // ---------- WEEK 3 ----------
+
+    // GET /api/orders/counts
+    // Tab badge numbers in one call.
+    [HttpGet("counts")]
+    public async Task<IActionResult> GetOrderCounts()
+    {
+        var userId = GetUserId();
+        var mine = _db.Orders.Where(o => o.UserId == userId);
+
+        var counts = new OrderCountsDto
+        {
+            All       = await mine.CountAsync(),
+            Pending   = await mine.CountAsync(o => o.Status.ToLower() == "pending"),
+            Shipped   = await mine.CountAsync(o => o.Status.ToLower() == "shipped"),
+            Delivered = await mine.CountAsync(o => o.Status.ToLower() == "delivered")
+        };
+
+        return Ok(counts);
+    }
+
+    // GET /api/orders/{id}/invoice
+    // PDF download (QuestPDF). 403 if it's not yours.
+    [HttpGet("{id:int}/invoice")]
+    public async Task<IActionResult> GetInvoice(int id)
+    {
+        var userId = GetUserId();
+
+        var order = await _db.Orders
+            .Include(o => o.Items)
+            .FirstOrDefaultAsync(o => o.Id == id);
+
+        if (order == null)
+        {
+            return NotFound(new { message = "Order not found" });
+        }
+
+        if (order.UserId != userId)
+        {
+            return StatusCode(403, new { message = "You can only download your own invoices" });
+        }
+
+        var user = await _db.Users.FindAsync(userId);
+        var pdfBytes = InvoiceDocument.Generate(order, user!);
+
+        return File(pdfBytes, "application/pdf", $"invoice-{order.OrderNumber}.pdf");
+    }
+
+// =========================================================
+    // ===============  SHARED HELPERS (IDI)  =================
+    // =========================================================
+
     // Generates an order code: one letter + 14 digits.
     // (Same shape the old frontend used, e.g. "A12345678901234")
     // =========================================================
+    private static string GenerateOrderNumber()
     private static string GenerateOrderNumber()
     {
         const string letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
