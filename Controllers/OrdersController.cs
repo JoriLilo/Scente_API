@@ -22,7 +22,7 @@ public class OrdersController : ControllerBase
     }
 
     // =========================================================
-    // POST /api/orders   (IDI — unchanged)
+    // POST /api/orders
     // Creates an Order + all OrderItems from the user's current
     // cart, clears the cart, and returns the generated order
     // number. Status defaults to "pending".
@@ -239,11 +239,14 @@ public class OrdersController : ControllerBase
         return File(pdfBytes, "application/pdf", $"invoice-{order.OrderNumber}.pdf");
     }
 
-    // =========================================================
+// =========================================================
     // ===============  SHARED HELPERS (IDI)  =================
     // =========================================================
 
     // Generates an order code: one letter + 14 digits.
+    // (Same shape the old frontend used, e.g. "A12345678901234")
+    // =========================================================
+    private static string GenerateOrderNumber()
     private static string GenerateOrderNumber()
     {
         const string letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -260,10 +263,14 @@ public class OrdersController : ControllerBase
         return letter + digits;
     }
 
-    // Extract current user ID from the JWT token
+    // =========================================================
+    // Extract current user ID from JWT token
+    // (identical pattern to WishlistController)
+    // =========================================================
     private int GetUserId()
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
         return int.Parse(userId!);
     }
 }
