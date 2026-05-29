@@ -190,7 +190,15 @@ public static class SeedData
         AddVolumes(58, [("100ml", 165)]);
         AddVolumes(59, [("100ml", 165)]);
 
+        var promoCodes = new List<PromoCode>
+        {
+            new() { Id = 1, Code = "SCENTE10", DiscountRate = 0.10m, IsActive = true, ExpiresAt = null },
+            new() { Id = 2, Code = "SUMMER20", DiscountRate = 0.20m, IsActive = true, ExpiresAt = null },
+            new() { Id = 3, Code = "VIP30",    DiscountRate = 0.30m, IsActive = true, ExpiresAt = null },
+        };
+
         modelBuilder.Entity<Product>().HasData(products);
         modelBuilder.Entity<ProductVolume>().HasData(volumes);
+        modelBuilder.Entity<PromoCode>().HasData(promoCodes);
     }
 }

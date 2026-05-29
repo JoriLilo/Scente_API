@@ -7,18 +7,18 @@ public class ScenteDbContext : DbContext
 {
     public ScenteDbContext(DbContextOptions<ScenteDbContext> options) : base(options) { }
 
-    public DbSet<Product>      Products      => Set<Product>();
-    public DbSet<ProductVolume> ProductVolumes => Set<ProductVolume>();
-    public DbSet<User>         Users         => Set<User>();
-    public DbSet<Order>        Orders        => Set<Order>();
-    public DbSet<OrderItem>    OrderItems    => Set<OrderItem>();
-    public DbSet<Cart>         Carts         => Set<Cart>();
-    public DbSet<CartItem>     CartItems     => Set<CartItem>();
-    public DbSet<Wishlist>     Wishlists     => Set<Wishlist>();
-    public DbSet<WishlistItem> WishlistItems => Set<WishlistItem>();
-    public DbSet<Review>       Reviews       => Set<Review>();
-    public DbSet<PromoCode>    PromoCodes    => Set<PromoCode>();
-    public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
+    public DbSet<Product>             Products             => Set<Product>();
+    public DbSet<ProductVolume>       ProductVolumes       => Set<ProductVolume>();
+    public DbSet<User>                Users                => Set<User>();
+    public DbSet<Order>               Orders               => Set<Order>();
+    public DbSet<OrderItem>           OrderItems           => Set<OrderItem>();
+    public DbSet<Cart>                Carts                => Set<Cart>();
+    public DbSet<CartItem>            CartItems            => Set<CartItem>();
+    public DbSet<Wishlist>            Wishlists            => Set<Wishlist>();
+    public DbSet<WishlistItem>        WishlistItems        => Set<WishlistItem>();
+    public DbSet<Review>              Reviews              => Set<Review>();
+    public DbSet<PromoCode>           PromoCodes           => Set<PromoCode>();
+    public DbSet<PasswordResetToken>  PasswordResetTokens  => Set<PasswordResetToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -54,6 +54,18 @@ public class ScenteDbContext : DbContext
             e.Property(u => u.Role).HasMaxLength(50).HasDefaultValue("customer");
         });
 
+        // ── PasswordResetToken ────────────────────────────────────
+        modelBuilder.Entity<PasswordResetToken>(e =>
+        {
+            e.HasKey(t => t.Id);
+            e.Property(t => t.Token).IsRequired().HasMaxLength(200);
+            e.HasIndex(t => t.Token).IsUnique();
+            e.HasOne(t => t.User)
+             .WithMany()
+             .HasForeignKey(t => t.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
         // ── Order ─────────────────────────────────────────────────
         modelBuilder.Entity<Order>(e =>
         {
@@ -64,7 +76,7 @@ public class ScenteDbContext : DbContext
             e.HasOne(o => o.User)
              .WithMany()
              .HasForeignKey(o => o.UserId)
-             .OnDelete(DeleteBehavior.Restrict); // don't delete orders if user is deleted
+             .OnDelete(DeleteBehavior.Restrict);
             e.HasMany(o => o.Items)
              .WithOne(i => i.Order)
              .HasForeignKey(i => i.OrderId)
@@ -81,7 +93,7 @@ public class ScenteDbContext : DbContext
             e.HasOne(i => i.Product)
              .WithMany()
              .HasForeignKey(i => i.ProductId)
-             .OnDelete(DeleteBehavior.Restrict); // keep order history even if product deleted
+             .OnDelete(DeleteBehavior.Restrict);
         });
 
         // ── Cart ──────────────────────────────────────────────────
@@ -128,7 +140,7 @@ public class ScenteDbContext : DbContext
         modelBuilder.Entity<WishlistItem>(e =>
         {
             e.HasKey(i => i.Id);
-            // Prevent duplicate products in the same wishlist
+            
             e.HasIndex(i => new { i.WishlistId, i.ProductId }).IsUnique();
             e.HasOne(i => i.Product)
              .WithMany()
@@ -159,13 +171,11 @@ public class ScenteDbContext : DbContext
             e.HasIndex(p => p.Code).IsUnique();
             e.Property(p => p.DiscountRate).HasColumnType("decimal(5,2)");
         });
-        
-        modelBuilder.Entity<User>()
-            .HasIndex(u => u.Email)
-            .IsUnique();
+
+
 
         // ── Seed data ─────────────────────────────────────────────
-        SeedData.Seed(modelBuilder);  
-    } 
+        SeedData.Seed(modelBuilder);
+    }
 }
 

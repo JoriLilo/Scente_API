@@ -6,6 +6,7 @@ using Scente.API.DTOs;
 using Scente.API.Entity;
 using System.Security.Claims;
 
+
 namespace Scente.API.Controllers;
 
 [ApiController]
@@ -199,6 +200,66 @@ public class CartController : ControllerBase
         });
     }
 
+    // POST /api/cart/merge
+// Called on login — merges guest localStorage cart into the user's DB cart
+[HttpPost("merge")]
+public async Task<IActionResult> MergeCart([FromBody] List<GuestCartItemDto> guestItems)
+{
+    if (guestItems == null || guestItems.Count == 0)
+        return Ok(new { message = "Nothing to merge" });
+
+    var userId = GetUserId();
+
+    var cart = await _db.Carts
+        .Include(c => c.Items)
+        .FirstOrDefaultAsync(c => c.UserId == userId);
+
+    if (cart == null)
+    {
+        cart = new Cart { UserId = userId };
+        _db.Carts.Add(cart);
+        await _db.SaveChangesAsync();
+    }
+
+    foreach (var guestItem in guestItems)
+    {
+        var product = await _db.Products.FindAsync(guestItem.ProductId);
+        if (product == null || product.Stock <= 0) continue;
+
+        var existing = cart.Items.FirstOrDefault(i =>
+            i.ProductId == guestItem.ProductId &&
+            i.Size == guestItem.Size);
+
+        if (existing != null)
+        {
+            existing.Quantity += guestItem.Quantity;
+        }
+        else
+        {
+            decimal price = product.Price;
+            if (!string.IsNullOrEmpty(guestItem.Size))
+            {
+                var volume = await _db.ProductVolumes
+                    .FirstOrDefaultAsync(v =>
+                        v.ProductId == guestItem.ProductId &&
+                        v.Size == guestItem.Size);
+                if (volume != null) price = volume.Price;
+            }
+
+            cart.Items.Add(new CartItem
+            {
+                CartId    = cart.Id,
+                ProductId = guestItem.ProductId,
+                Quantity  = guestItem.Quantity,
+                Size      = guestItem.Size ?? "50ml",
+                Price     = price
+            });
+        }
+    }
+
+    await _db.SaveChangesAsync();
+    return Ok(new { message = "Cart merged" });
+}
     private int GetUserId()
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -206,18 +267,3 @@ public class CartController : ControllerBase
     }
 }
 
-public class AddCartItemDto
-{
-    public int     ProductId { get; set; }
-    public string? Size      { get; set; }
-}
-
-public class UpdateCartItemDto
-{
-    public int Quantity { get; set; }
-}
-
-public class PromoDto
-{
-    public string Code { get; set; } = string.Empty;
-}
