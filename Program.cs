@@ -6,6 +6,7 @@ using Scente.API.Data;
 using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
+using Scente.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -62,6 +63,8 @@ builder.Services.AddDbContext<ScenteDbContext>(options =>
         connectionString,
         new MySqlServerVersion(new Version(8, 0, 0))
 ));
+
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 builder.Services.AddCors(options =>
     options.AddPolicy("FrontendPolicy", policy =>
