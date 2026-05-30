@@ -27,16 +27,18 @@ public class CartController : ControllerBase
             .Include(c => c.Items).ThenInclude(i => i.Product)
             .FirstOrDefaultAsync(c => c.UserId == userId);
 
-        if (cart == null)
-            return Ok(new { items = new List<object>(), subtotal = 0, warnings = new List<string>() });
+        if (cart == null || cart.Items == null || cart.Items.Count == 0)
+            return Ok(new { items = new List<object>(), subtotal = 0m, warnings = new List<string>() });
 
-        // Stock validation warnings (from cart/ari)
-        var warnings = cart.Items
+        // Drop any orphan items whose product was deleted
+        var validItems = cart.Items.Where(i => i.Product != null).ToList();
+
+        var warnings = validItems
             .Where(i => i.Quantity > i.Product.Stock)
             .Select(i => $"Only {i.Product.Stock} units of {i.Product.Name} left in stock.")
             .ToList();
 
-        var items = cart.Items.Select(i => new
+        var items = validItems.Select(i => new
         {
             id        = i.Id,
             name      = i.Product.Name,
