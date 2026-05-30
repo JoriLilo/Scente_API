@@ -12,8 +12,8 @@ using Scente.API.Data;
 namespace Scente.API.Migrations
 {
     [DbContext(typeof(ScenteDbContext))]
-    [Migration("20260526095000_SyncModel")]
-    partial class SyncModel
+    [Migration("20260529204042_SeedPromoCodes")]
+    partial class SeedPromoCodes
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -177,6 +177,31 @@ namespace Scente.API.Migrations
                     b.HasIndex("ProductId");
 
                     b.ToTable("OrderItems");
+                });
+
+            modelBuilder.Entity("Scente.API.Entity.PasswordResetToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("PasswordResetTokens");
                 });
 
             modelBuilder.Entity("Scente.API.Entity.Product", b =>
@@ -1897,6 +1922,29 @@ namespace Scente.API.Migrations
                         .IsUnique();
 
                     b.ToTable("PromoCodes");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Code = "SCENTE10",
+                            DiscountRate = 0.10m,
+                            IsActive = true
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Code = "SUMMER20",
+                            DiscountRate = 0.20m,
+                            IsActive = true
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Code = "VIP30",
+                            DiscountRate = 0.30m,
+                            IsActive = true
+                        });
                 });
 
             modelBuilder.Entity("Scente.API.Entity.Review", b =>
@@ -2085,6 +2133,17 @@ namespace Scente.API.Migrations
                     b.Navigation("Order");
 
                     b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("Scente.API.Entity.PasswordResetToken", b =>
+                {
+                    b.HasOne("Scente.API.Entity.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Scente.API.Entity.ProductVolume", b =>

@@ -7,3 +7,10 @@ public class AddCartItemDto
     public string Size { get; set; } = string.Empty;
     public decimal Price { get; set; }
 }
+
+public class GuestCartItemDto
+{
+    public int    ProductId { get; set; }
+    public string Size      { get; set; } = string.Empty;
+    public int    Quantity  { get; set; }
+}

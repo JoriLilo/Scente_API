@@ -212,6 +212,45 @@ public class OrdersController : ControllerBase
         return Ok(counts);
     }
 
+    // GET /api/orders/{orderNumber}/confirmation
+// Returns order summary for the checkout confirmation modal
+[HttpGet("{orderNumber}/confirmation")]
+public async Task<IActionResult> GetConfirmation(string orderNumber)
+{
+    var userId = GetUserId();
+
+    var order = await _db.Orders
+        .Include(o => o.Items)
+        .FirstOrDefaultAsync(o => o.OrderNumber == orderNumber);
+
+    if (order == null)
+        return NotFound(new { message = "Order not found" });
+
+    if (order.UserId != userId)
+        return StatusCode(403, new { message = "You can only view your own orders" });
+
+    const decimal freeShippingAt = 50m;
+    const decimal flatShipping   = 15m;
+    var itemsTotal   = order.Items.Sum(i => i.Price * i.Quantity);
+    var shippingCost = itemsTotal >= freeShippingAt ? 0m : flatShipping;
+
+    return Ok(new
+    {
+        orderNumber       = order.OrderNumber,
+        totalPaid         = order.TotalPaid,
+        shippingCost,
+        status            = order.Status,
+        estimatedDelivery = DateTime.UtcNow.AddDays(5).ToString("dd MMM yyyy"),
+        items             = order.Items.Select(i => new
+        {
+            i.ProductName,
+            i.Price,
+            i.Quantity,
+            i.Size
+        })
+    });
+}
+
     // GET /api/orders/{id}/invoice
     // PDF download (QuestPDF). 403 if it's not yours.
     [HttpGet("{id:int}/invoice")]
@@ -246,7 +285,7 @@ public class OrdersController : ControllerBase
     // Generates an order code: one letter + 14 digits.
     // (Same shape the old frontend used, e.g. "A12345678901234")
     // =========================================================
-    private static string GenerateOrderNumber()
+  
     private static string GenerateOrderNumber()
     {
         const string letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
