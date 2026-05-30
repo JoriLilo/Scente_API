@@ -1,67 +1,66 @@
-using Microsoft.AspNetCore.Authorization;
+like this using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Scente.API.Data;
-using Scente.API.Documents;   // <-- ADDED (Kristi) for the PDF invoice
+using Scente.API.Documents;
 using Scente.API.DTOs;
 using Scente.API.Entity;
+using Scente.API.Services;
 using System.Security.Claims;
 
 namespace Scente.API.Controllers;
 
 [ApiController]
 [Route("api/orders")]
-[Authorize] // must be logged in — placing an order while logged out returns 401
+[Authorize]
 public class OrdersController : ControllerBase
 {
     private readonly ScenteDbContext _db;
+    private readonly IEmailService _email;
 
-    public OrdersController(ScenteDbContext db)
+    private const decimal FreeShippingThreshold = 50m;
+    private const decimal FlatShippingCost      = 15m;
+
+    public OrdersController(ScenteDbContext db, IEmailService email)
     {
-        _db = db;
+        _db   = db;
+        _email = email;
     }
 
-    // =========================================================
     // POST /api/orders
-    // Creates an Order + all OrderItems from the user's current
-    // cart, clears the cart, and returns the generated order
-    // number. Status defaults to "pending".
-    // =========================================================
     [HttpPost]
     public async Task<IActionResult> CreateOrder(CreateOrderDto dto)
     {
         var userId = GetUserId();
 
-        // 1. Load the user's cart together with its items and the
-        //    real Product behind each item (we need the DB price).
+        if (string.IsNullOrWhiteSpace(dto.City)    ||
+            string.IsNullOrWhiteSpace(dto.Country) ||
+            string.IsNullOrWhiteSpace(dto.Phone)   ||
+            string.IsNullOrWhiteSpace(dto.ShippingAddress))
+        {
+            return BadRequest(new { message = "Shipping address, city, country and phone are required." });
+        }
+
         var cart = await _db.Carts
             .Include(c => c.Items)
             .ThenInclude(i => i.Product)
             .FirstOrDefaultAsync(c => c.UserId == userId);
 
-        // 2. Guard: no cart, or an empty cart, cannot become an order.
         if (cart == null || cart.Items.Count == 0)
-        {
-            return BadRequest(new
-            {
-                message = "Your cart is empty."
-            });
-        }
+            return BadRequest(new { message = "Your cart is empty." });
 
-        // 3. Build the order. The total is summed from the cart
-        //    items here on the server — we never trust a total
-        //    sent from the browser.
+        var subtotal = cart.Items.Sum(i => i.Price * i.Quantity);
+        var shipping = CalculateShipping(subtotal);
+        var total    = subtotal + shipping;
+
         var order = new Order
         {
-            OrderNumber    = GenerateOrderNumber(),
-            UserId         = userId,
-            Date           = DateTime.UtcNow,
-            Status         = "pending",          // default on creation
-            PaymentMethod  = dto.PaymentMethod,
-            TotalPaid      = cart.Items.Sum(i => i.Price * i.Quantity),
-
-            // Shipping snapshot — saved onto the order so it stays
-            // correct even if the user changes their address later.
+            OrderNumber     = GenerateOrderNumber(),
+            UserId          = userId,
+            Date            = DateTime.UtcNow,
+            Status          = "pending",
+            PaymentMethod   = dto.PaymentMethod,
+            TotalPaid       = total,
             ShippingAddress = dto.ShippingAddress,
             City            = dto.City,
             PostalCode      = dto.PostalCode,
@@ -69,9 +68,6 @@ public class OrdersController : ControllerBase
             Phone           = dto.Phone
         };
 
-        // 4. Copy every cart item into an order item. We snapshot
-        //    the name and price at purchase time so order history
-        //    is always accurate even if the product changes later.
         order.Items = cart.Items.Select(i => new OrderItem
         {
             ProductId   = i.ProductId,
@@ -81,29 +77,45 @@ public class OrdersController : ControllerBase
             Size        = i.Size
         }).ToList();
 
-        // 5. Save the order, then empty the cart.
         _db.Orders.Add(order);
         _db.CartItems.RemoveRange(cart.Items);
         await _db.SaveChangesAsync();
 
-        // 6. Return the order number for the confirmation modal.
+        var user = await _db.Users.FindAsync(userId);
+        if (user != null)
+        {
+            var emailData = new OrderEmailData
+            {
+                ToEmail           = user.Email,
+                CustomerName      = user.FirstName,
+                OrderNumber       = order.OrderNumber,
+                Subtotal          = subtotal,
+                ShippingCost      = shipping,
+                TotalPaid         = total,
+                EstimatedDelivery = order.Date.AddDays(5).ToString("MMM d, yyyy"),
+                Items = order.Items.Select(i => new OrderEmailLine
+                {
+                    ProductName = i.ProductName,
+                    Size        = i.Size,
+                    Quantity    = i.Quantity,
+                    Price       = i.Price
+                }).ToList()
+            };
+
+            await _email.SendOrderConfirmationAsync(emailData);
+        }
+
         return Ok(new
         {
-            orderNumber = order.OrderNumber,
-            totalPaid   = order.TotalPaid,
-            status      = order.Status
+            orderNumber  = order.OrderNumber,
+            subtotal,
+            shippingCost = shipping,
+            totalPaid    = order.TotalPaid,
+            status       = order.Status
         });
     }
 
-    // =========================================================
-    // ===============  KRISTI'S ENDPOINTS BELOW  ==============
-    // =========================================================
-
-    // ---------- WEEK 2 ----------
-
-    // GET /api/orders?status=&search=
-    // Returns ONLY the logged-in user's orders.
-    // Tab filter -> ?status=,  search bar -> ?search=
+    // GET /api/orders
     [HttpGet]
     public async Task<IActionResult> GetMyOrders(
         [FromQuery] string? status,
@@ -115,7 +127,6 @@ public class OrdersController : ControllerBase
             .Include(o => o.Items)
             .Where(o => o.UserId == userId);
 
-        // "all" or empty = no status filter
         if (!string.IsNullOrWhiteSpace(status) && status.ToLower() != "all")
         {
             var s = status.ToLower();
@@ -145,7 +156,6 @@ public class OrdersController : ControllerBase
     }
 
     // GET /api/orders/{id}
-    // Single order with its items. 403 if it's not yours.
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetOrderById(int id)
     {
@@ -156,15 +166,10 @@ public class OrdersController : ControllerBase
             .FirstOrDefaultAsync(o => o.Id == id);
 
         if (order == null)
-        {
             return NotFound(new { message = "Order not found" });
-        }
 
-        // Security: you can only see your own orders
         if (order.UserId != userId)
-        {
             return StatusCode(403, new { message = "You can only view your own orders" });
-        }
 
         var dto = new OrderDetailDto
         {
@@ -191,15 +196,12 @@ public class OrdersController : ControllerBase
         return Ok(dto);
     }
 
-    // ---------- WEEK 3 ----------
-
     // GET /api/orders/counts
-    // Tab badge numbers in one call.
     [HttpGet("counts")]
     public async Task<IActionResult> GetOrderCounts()
     {
         var userId = GetUserId();
-        var mine = _db.Orders.Where(o => o.UserId == userId);
+        var mine   = _db.Orders.Where(o => o.UserId == userId);
 
         var counts = new OrderCountsDto
         {
@@ -213,46 +215,43 @@ public class OrdersController : ControllerBase
     }
 
     // GET /api/orders/{orderNumber}/confirmation
-// Returns order summary for the checkout confirmation modal
-[HttpGet("{orderNumber}/confirmation")]
-public async Task<IActionResult> GetConfirmation(string orderNumber)
-{
-    var userId = GetUserId();
-
-    var order = await _db.Orders
-        .Include(o => o.Items)
-        .FirstOrDefaultAsync(o => o.OrderNumber == orderNumber);
-
-    if (order == null)
-        return NotFound(new { message = "Order not found" });
-
-    if (order.UserId != userId)
-        return StatusCode(403, new { message = "You can only view your own orders" });
-
-    const decimal freeShippingAt = 50m;
-    const decimal flatShipping   = 15m;
-    var itemsTotal   = order.Items.Sum(i => i.Price * i.Quantity);
-    var shippingCost = itemsTotal >= freeShippingAt ? 0m : flatShipping;
-
-    return Ok(new
+    [HttpGet("{orderNumber}/confirmation")]
+    public async Task<IActionResult> GetConfirmation(string orderNumber)
     {
-        orderNumber       = order.OrderNumber,
-        totalPaid         = order.TotalPaid,
-        shippingCost,
-        status            = order.Status,
-        estimatedDelivery = DateTime.UtcNow.AddDays(5).ToString("dd MMM yyyy"),
-        items             = order.Items.Select(i => new
+        var userId = GetUserId();
+
+        var order = await _db.Orders
+            .Include(o => o.Items)
+            .FirstOrDefaultAsync(o =>
+                o.OrderNumber == orderNumber && o.UserId == userId);
+
+        if (order == null)
+            return NotFound(new { message = "Order not found." });
+
+        var subtotal = order.Items.Sum(i => i.Price * i.Quantity);
+        var shipping = order.TotalPaid - subtotal;
+
+        return Ok(new
         {
-            i.ProductName,
-            i.Price,
-            i.Quantity,
-            i.Size
-        })
-    });
-}
+            orderNumber       = order.OrderNumber,
+            status            = order.Status,
+            date              = order.Date,
+            paymentMethod     = order.PaymentMethod,
+            subtotal,
+            shippingCost      = shipping,
+            totalPaid         = order.TotalPaid,
+            estimatedDelivery = order.Date.AddDays(5).ToString("MMM d, yyyy"),
+            items = order.Items.Select(i => new
+            {
+                name     = i.ProductName,
+                price    = i.Price,
+                quantity = i.Quantity,
+                size     = i.Size
+            })
+        });
+    }
 
     // GET /api/orders/{id}/invoice
-    // PDF download (QuestPDF). 403 if it's not yours.
     [HttpGet("{id:int}/invoice")]
     public async Task<IActionResult> GetInvoice(int id)
     {
@@ -263,53 +262,33 @@ public async Task<IActionResult> GetConfirmation(string orderNumber)
             .FirstOrDefaultAsync(o => o.Id == id);
 
         if (order == null)
-        {
             return NotFound(new { message = "Order not found" });
-        }
 
         if (order.UserId != userId)
-        {
             return StatusCode(403, new { message = "You can only download your own invoices" });
-        }
 
-        var user = await _db.Users.FindAsync(userId);
+        var user     = await _db.Users.FindAsync(userId);
         var pdfBytes = InvoiceDocument.Generate(order, user!);
 
         return File(pdfBytes, "application/pdf", $"invoice-{order.OrderNumber}.pdf");
     }
 
-// =========================================================
-    // ===============  SHARED HELPERS (IDI)  =================
-    // =========================================================
+    // ── Helpers ───────────────────────────────────────────────
+    private static decimal CalculateShipping(decimal subtotal)
+        => subtotal >= FreeShippingThreshold ? 0m : FlatShippingCost;
 
-    // Generates an order code: one letter + 14 digits.
-    // (Same shape the old frontend used, e.g. "A12345678901234")
-    // =========================================================
-  
     private static string GenerateOrderNumber()
     {
         const string letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         var random = new Random();
-
         var letter = letters[random.Next(letters.Length)];
-
-        var digits = "";
-        for (var i = 0; i < 14; i++)
-        {
-            digits += random.Next(10);
-        }
-
+        var digits = string.Concat(Enumerable.Range(0, 14).Select(_ => random.Next(10)));
         return letter + digits;
     }
 
-    // =========================================================
-    // Extract current user ID from JWT token
-    // (identical pattern to WishlistController)
-    // =========================================================
     private int GetUserId()
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
         return int.Parse(userId!);
     }
 }
